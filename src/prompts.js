@@ -35,10 +35,21 @@ export const ROOM_PROMPT_V3 = (context) => `<dungeon>
 </room>
 </dungeon>`;
 
+// V4: fill-in-the-blank style — easiest for a small model to follow
+export const ROOM_PROMPT_V4 = (context) => `Complete this dungeon room (${context.roomType}, ${context.theme} theme):
+Room: The ${context.roomType} is
+Danger: A
+Choice 1: Attack
+Choice 2: Sneak
+Choice 3: Use item
+Result 1: You attack and
+Result 2: You sneak and
+Result 3: You use an item and`;
+
 export const AUTOPLAY_PROMPT = (roomDesc, encounterText, choices) =>
   `You are in: ${roomDesc}. ${encounterText}
 Choices: ${choices.map((c, i) => `${i + 1}. ${c}`).join(', ')}.
 Pick the best choice. Reply with just the number (1, 2, or 3).`;
 
 // Active prompt version
-export const ROOM_PROMPT = ROOM_PROMPT_V1;
+export const ROOM_PROMPT = ROOM_PROMPT_V4;

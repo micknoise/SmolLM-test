@@ -66,8 +66,6 @@ const MOCK_ROOMS = [
   },
 ];
 
-let mockIndex = 0;
-
 function isMockMode() {
   if (typeof window !== 'undefined') {
     return new URLSearchParams(window.location.search).get('mock') === 'true';
@@ -76,8 +74,7 @@ function isMockMode() {
 }
 
 function mockGenerate() {
-  const room = MOCK_ROOMS[mockIndex % MOCK_ROOMS.length];
-  mockIndex++;
+  const room = MOCK_ROOMS[Math.floor(Math.random() * MOCK_ROOMS.length)];
   return [
     `ROOM: ${room.description}`,
     `ENCOUNTER: ${room.encounter}`,
