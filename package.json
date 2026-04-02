@@ -1,0 +1,29 @@
+{
+  "name": "smollm-test",
+  "version": "1.0.0",
+  "description": "Test of smolLM procedural generation",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:game": "node test/game.test.js",
+    "test:play": "node test/play.test.js",
+    "test:harness": "node test/harness.js",
+    "test": "node test/game.test.js && node test/play.test.js && node test/harness.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:36411/git/micknoise/SmolLM-test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.82"
+  },
+  "devDependencies": {
+    "vite": "^8.0.3"
+  }
+}
