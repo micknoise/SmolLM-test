@@ -66,8 +66,6 @@ const MOCK_ROOMS = [
   },
 ];
 
-let mockIndex = 0;
-
 function isMockMode() {
   if (typeof window !== 'undefined') {
     return new URLSearchParams(window.location.search).get('mock') === 'true';
@@ -76,8 +74,7 @@ function isMockMode() {
 }
 
 function mockGenerate() {
-  const room = MOCK_ROOMS[mockIndex % MOCK_ROOMS.length];
-  mockIndex++;
+  const room = MOCK_ROOMS[Math.floor(Math.random() * MOCK_ROOMS.length)];
   return [
     `ROOM: ${room.description}`,
     `ENCOUNTER: ${room.encounter}`,
@@ -133,13 +130,18 @@ class LLMEngine {
     }
 
     const response = await this.engine.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: 'You write vivid dungeon descriptions. Be concise and atmospheric.' },
+        { role: 'user', content: prompt },
+      ],
       max_tokens: maxTokens,
       temperature: 0.8,
       top_p: 0.95,
     });
 
-    return response.choices[0].message.content;
+    const text = response.choices[0].message.content;
+    console.log('[SmolLM2 raw output]', JSON.stringify(text));
+    return text;
   }
 
   async generateWithChoice(prompt, maxTokens = 10) {
