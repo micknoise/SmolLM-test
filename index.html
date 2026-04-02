@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DUNGEON // SmolLM2</title>
+  <style>
+    :root {
+      --green: #39ff14;
+      --dim-green: #1a7a08;
+      --bg: #030a03;
+      --panel-bg: #050d05;
+      --border: #1d4d1d;
+      --amber: #ffb000;
+      --red: #ff3030;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--green);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* CRT scanline effect */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* CRT glow */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      letter-spacing: 4px;
+      text-shadow: 0 0 10px var(--green);
+    }
+
+    #model-badge {
+      font-size: 10px;
+      color: var(--dim-green);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+    }
+
+    /* Loading / start section */
+    #start-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .progress-container {
+      width: 400px;
+      max-width: 90vw;
+    }
+
+    .progress-track {
+      border: 1px solid var(--border);
+      height: 16px;
+      background: var(--panel-bg);
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: var(--green);
+      width: 0%;
+      transition: width 0.3s;
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    #progress-text {
+      font-size: 11px;
+      color: var(--dim-green);
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    #webgpu-error {
+      display: none;
+      color: var(--red);
+      border: 1px solid var(--red);
+      padding: 12px;
+      max-width: 500px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    /* Game layout */
+    #game-section {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      padding: 8px;
+      height: calc(100vh - 42px);
+    }
+
+    @media (max-width: 700px) {
+      #game-section {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    .panel-label {
+      font-size: 10px;
+      color: var(--dim-green);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+
+    /* Map */
+    #map-panel {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      overflow: auto;
+    }
+
+    #map {
+      white-space: pre;
+      font-size: 13px;
+      line-height: 1.4;
+      text-shadow: 0 0 6px var(--green);
+    }
+
+    /* Room info */
+    #info-panel {
+      grid-column: 2;
+      grid-row: 1;
+      overflow: auto;
+    }
+
+    #room-desc {
+      color: #aaddaa;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    #encounter {
+      color: var(--amber);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    #encounter.outcome {
+      color: var(--dim-green);
+      font-style: italic;
+    }
+
+    /* Action buttons */
+    #choices, #doors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.1s, box-shadow 0.1s;
+      min-width: 60px;
+    }
+
+    button:hover, button:focus {
+      background: var(--green);
+      color: var(--bg);
+      box-shadow: 0 0 10px var(--green);
+      outline: none;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .door-btn.unexplored {
+      border-color: var(--dim-green);
+      color: var(--dim-green);
+    }
+
+    .door-btn.visited {
+      border-color: #666;
+      color: #666;
+    }
+
+    .choice-btn {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    /* Stats bar */
+    #stats-panel {
+      grid-column: 1 / 3;
+      grid-row: 3;
+      border: none;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      padding: 6px 8px;
+    }
+
+    #stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    #stats span { color: var(--dim-green); }
+    #stats b { color: var(--green); }
+
+    /* Log */
+    #log-panel {
+      grid-column: 2;
+      grid-row: 2;
+      overflow: hidden;
+    }
+
+    #log {
+      height: 100%;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+
+    .log-line {
+      color: #559955;
+      padding: 1px 0;
+      border-bottom: 1px solid #0a1a0a;
+    }
+
+    .log-line:last-child {
+      color: var(--green);
+    }
+
+    /* Inline loading overlay */
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      bottom: 50px;
+      right: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--green);
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--green);
+      z-index: 100;
+    }
+
+    #loading-overlay.active { display: block; }
+
+    #loading-msg::after {
+      content: '...';
+      animation: dots 1s infinite;
+    }
+
+    @keyframes dots {
+      0% { content: '.'; }
+      33% { content: '..'; }
+      66% { content: '...'; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+  <script type="module" crossorigin src="./assets/index-D9oLBl9l.js"></script>
+</head>
+<body>
+  <header>
+    <h1>⬛ DUNGEON</h1>
+    <span id="model-badge">SmolLM2-360M</span>
+  </header>
+
+  <!-- Loading / start -->
+  <section id="start-section">
+    <div style="font-size: 12px; color: var(--dim-green); letter-spacing: 3px;">INITIALISING ENGINE</div>
+    <div class="progress-container">
+      <div class="progress-track"><div id="progress-bar"></div></div>
+      <div id="progress-text">Waiting...</div>
+    </div>
+    <div id="webgpu-error"></div>
+  </section>
+
+  <!-- Game -->
+  <section id="game-section">
+    <div class="panel" id="map-panel">
+      <div class="panel-label">MAP</div>
+      <pre id="map"></pre>
+    </div>
+
+    <div class="panel" id="info-panel">
+      <div class="panel-label">ROOM</div>
+      <div id="room-desc"></div>
+      <div id="encounter"></div>
+      <div id="choices"></div>
+      <div id="doors"></div>
+    </div>
+
+    <div class="panel" id="log-panel">
+      <div class="panel-label">LOG</div>
+      <div id="log"></div>
+    </div>
+
+    <div id="stats-panel" class="panel">
+      <div id="stats"></div>
+    </div>
+  </section>
+
+  <!-- Inline loading spinner -->
+  <div id="loading-overlay"><span id="loading-msg">Generating room</span></div>
+
+</body>
+</html>
