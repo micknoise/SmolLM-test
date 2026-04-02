@@ -130,13 +130,18 @@ class LLMEngine {
     }
 
     const response = await this.engine.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: 'You write vivid dungeon descriptions. Be concise and atmospheric.' },
+        { role: 'user', content: prompt },
+      ],
       max_tokens: maxTokens,
       temperature: 0.8,
       top_p: 0.95,
     });
 
-    return response.choices[0].message.content;
+    const text = response.choices[0].message.content;
+    console.log('[SmolLM2 raw output]', JSON.stringify(text));
+    return text;
   }
 
   async generateWithChoice(prompt, maxTokens = 10) {
